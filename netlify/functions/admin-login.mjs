@@ -1,0 +1,3 @@
+import { json, body, safeEmail } from './_db.mjs';
+import { signAdmin } from './_admin.mjs';
+export async function handler(event){if(event.httpMethod!=='POST')return json(405,{error:'Method not allowed'});try{const b=body(event),email=String(b.email||'').trim().toLowerCase(),password=String(b.password||'');const expectedEmail=String(process.env.ADMIN_EMAIL||'').trim().toLowerCase();const expectedPassword=String(process.env.ADMIN_PASSWORD||'');if(!safeEmail(email)||!expectedEmail||!expectedPassword||email!==expectedEmail||password!==expectedPassword)return json(401,{error:'Invalid admin credentials.'});return json(200,{token:signAdmin(email)});}catch(e){console.error(e);return json(500,{error:'Admin login is not configured yet.'});}}
