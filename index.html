@@ -447,7 +447,12 @@ document.querySelector('[data-action="logout"]').addEventListener("click",logout
   setLanguage(store.settings.language||"en",false);
   localStorage.setItem(STORE_KEY,JSON.stringify(store));
   (async()=>{const hadRemote=await loadRemoteProducts();if(!hadRemote&&sessionStorage.getItem(SESSION_KEY)){const ok=await syncProductsRemote();if(ok)toast("Catalog connected to Supabase ✓")};if(sessionStorage.getItem(SESSION_KEY))await loadRemoteOrders();renderStore();if(sessionStorage.getItem(SESSION_KEY))showAdmin()})();
-  setInterval(()=>{if(document.getElementById("storefront").style.display!=="none")renderProducts()},60000);
+setInterval(async()=>{
+  if(document.getElementById("storefront").style.display!=="none"){
+    await loadRemoteProducts();
+    renderProducts();
+  }
+},5000);
 })();
 </script>
 </body>
