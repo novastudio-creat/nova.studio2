@@ -37,7 +37,7 @@ function mapProduct(row) {
 }
 
 async function supabase(path, options = {}) {
-  const url = process.env.SUPABASE_URL;
+const url = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
