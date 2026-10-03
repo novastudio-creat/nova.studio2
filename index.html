@@ -223,7 +223,45 @@ const seed=()=>({
 });
 let store=loadStore(), currentPage="dashboard", currentCategory="All", editingProductId=null, checkoutProductId=null, checkoutPromo=null;
 function loadStore(){try{const raw=localStorage.getItem(STORE_KEY);if(raw)return JSON.parse(raw)}catch(e){}const s=seed();localStorage.setItem(STORE_KEY,JSON.stringify(s));return s}
-function saveStore(){localStorage.setItem(STORE_KEY,JSON.stringify(store));renderStore();if(document.getElementById("admin").style.display!=="none")renderAdmin()}
+function saveStore(){
+  try{
+    localStorage.setItem(STORE_KEY,JSON.stringify(store));
+  }catch(e){
+    if(e?.name==="QuotaExceededError"){
+      try{
+        const backup=JSON.parse(JSON.stringify(store));
+
+        if(Array.isArray(backup.products)){
+          backup.products=backup.products.map(p=>({
+            ...p,
+            coverImage:
+              typeof p.coverImage==="string"&&p.coverImage.startsWith("data:")
+                ?"♡"
+                :p.coverImage,
+            screenshots:
+              Array.isArray(p.screenshots)
+                ?p.screenshots
+                    .map(x=>typeof x==="string"&&x.startsWith("data:")?"":x)
+                    .filter(Boolean)
+                :[]
+          }));
+        }
+
+        localStorage.setItem(STORE_KEY,JSON.stringify(backup));
+      }catch(storageError){
+        console.warn("Local backup skipped because browser storage is full.",storageError);
+      }
+    }else{
+      console.warn("Local storage save failed.",e);
+    }
+  }
+
+  renderStore();
+
+  if(document.getElementById("admin").style.display!=="none"){
+    renderAdmin();
+  }
+}
 async function catalogRequest(options={}){const headers={"Content-Type":"application/json",...(options.headers||{})};const token=sessionStorage.getItem(SESSION_KEY);if(token)headers.Authorization="Bearer "+token;const r=await fetch("/api/products",{...options,headers});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Catalog backend error");return data}
 async function loadRemoteProducts(){try{const data=await catalogRequest();if(Array.isArray(data.products)&&data.products.length){store.products=data.products;store.products.forEach(p=>{const legacy=Number(p.regularPrice)||0,legacySale=p.salePrice==null?null:Number(p.salePrice);p.prices=p.prices||{};["EUR","DZD","USD"].forEach(cur=>{if(!p.prices[cur])p.prices[cur]={regular:legacy,sale:legacySale}})});localStorage.setItem(STORE_KEY,JSON.stringify(store));return true}}catch(e){console.warn("Remote catalog unavailable; using local backup.",e)}return false}
 async function ordersRequest(options={}){const headers={"Content-Type":"application/json",...(options.headers||{})};const token=sessionStorage.getItem(SESSION_KEY);if(token)headers.Authorization="Bearer "+token;const r=await fetch("/api/orders",{...options,headers});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||"Orders backend error");return data}
