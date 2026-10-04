@@ -415,7 +415,20 @@ function applyPromo(){const code=(document.getElementById("promoInput").value||"
 function updateCheckoutTotals(){const p=store.products.find(x=>x.id===checkoutProductId),sub=saleInfo(p,customerCurrency()).price,c=checkoutPromo;let d=0;if(c)d=c.type==="percentage"?sub*c.discount/100:c.discount;if(c?.maxDiscount)d=Math.min(d,c.maxDiscount);d=Math.min(d,sub);document.getElementById("coSubtotal").textContent=money(sub,customerCurrency());document.getElementById("coDiscount").textContent=money(d,customerCurrency());document.getElementById("coTotal").textContent=money(sub-d,customerCurrency())}
 function nextOrderNumber(){const nums=store.orders.map(o=>parseInt(String(o.orderNumber??o.id??"").replace(/\D/g,""),10)).filter(Number.isFinite);return (nums.length?Math.max(...nums):0)+1}
 function newClientOrderId(){return "co_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10)}
-async function persistOrder(order){const remote=await pushOrderRemote(order);if(remote){store.orders.unshift(remote);localStorage.setItem(STORE_KEY,JSON.stringify(store));return remote}store.orders.unshift(order);saveStore();return order}
+async function persistOrder(order){
+  const remote=await pushOrderRemote(order);
+  const saved=remote||order;
+
+  store.orders.unshift(saved);
+
+  try{
+    localStorage.setItem(STORE_KEY,JSON.stringify(store));
+  }catch(e){
+    console.warn("Local cache full, order is still saved online.",e);
+  }
+
+  return saved;
+}
 function confirmationHtml(order,p){return `<div class="order-success"><div class="demo-note">Your order has been received. We only collected the information needed to process your order.</div><div class="order-number">Order #${order.orderNumber}</div><div class="order-card"><div class="row"><span class="labelx">Name</span><span class="valuex">${esc(order.customer)}</span></div><div class="row"><span class="labelx">Email</span><span class="valuex">${esc(order.email)}</span></div><div class="row"><span class="labelx">Product</span><span class="valuex">${esc(order.product)}</span></div><div class="row"><span class="labelx">Currency</span><span class="valuex">${esc(order.currency)}</span></div><div class="row"><span class="labelx">Payment</span><span class="valuex">${esc(order.paymentMethod||"Demo")}</span></div><div class="order-total"><span>Total</span><span>${money(order.finalPrice,order.currency)}</span></div></div><button class="btn btn-primary" style="width:100%;margin-top:15px" onclick="${p.downloadUrl?`window.open('${esc(p.downloadUrl).replace(/'/g,"\'")}','_blank')`:`toast('Your digital delivery will appear here once a download link is configured.')`}">Access / Download Your Game</button></div>`}
 async function simulatePurchase(){const name=document.getElementById("coName").value.trim(),email=document.getElementById("coEmail").value.trim();if(!name){toast("Please enter your name.",false);return}if(!email){toast("Please enter a valid customer email.",false);return}const p=store.products.find(x=>x.id===checkoutProductId),cur=customerCurrency(),sub=saleInfo(p,cur).price,c=checkoutPromo;let d=c?(c.type==="percentage"?sub*c.discount/100:c.discount):0;if(c?.maxDiscount)d=Math.min(d,c.maxDiscount);d=Math.min(d,sub);const order={clientOrderId:newClientOrderId(),date:new Date().toISOString(),customer:name,email,productId:p.id,product:p.title,originalPrice:saleInfo(p,cur).reg,discount:Number(d.toFixed(2)),promoCode:c?.code||"",finalPrice:Number((sub-d).toFixed(2)),currency:cur,paymentMethod:"Demo",paymentStatus:"Paid (Demo)",downloadStatus:"Demo available"};let cust=store.customers.find(x=>x.email.toLowerCase()===email.toLowerCase());if(!cust){cust={id:uid("cust"),name,email,createdAt:Date.now()};store.customers.push(cust)}else{cust.name=name}if(c){c.uses++}const savedOrder=await persistOrder(order);localStorage.removeItem("novaPendingCheckout");openModal("Order confirmed ✦",confirmationHtml(savedOrder,p))}
 
