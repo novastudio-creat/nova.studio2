@@ -442,7 +442,6 @@ document.querySelector('[data-action="logout"]').addEventListener("click",logout
   if(!Array.isArray(store.testimonials))store.testimonials=base.testimonials;
   if(!Array.isArray(store.faq))store.faq=base.faq;
   applyTheme(store.settings.theme,false);
-  renderStore();
   const cc=document.getElementById("customerCurrency");if(cc)cc.value=customerCurrency();
   setLanguage(store.settings.language||"en",false);
   localStorage.setItem(STORE_KEY,JSON.stringify(store));
