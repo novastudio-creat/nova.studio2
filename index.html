@@ -376,6 +376,7 @@ async function submitBaridi(){
 
     if(c)c.uses++;
 
+await persistOrder(order);
 const savedOrder=order;
 
     localStorage.removeItem('novaPendingCheckout');
