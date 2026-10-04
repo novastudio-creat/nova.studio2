@@ -429,7 +429,54 @@ async function persistOrder(order){
 
   return saved;
 }
-function confirmationHtml(order,p){return `<div class="order-success"><div class="demo-note">Your order has been received. We only collected the information needed to process your order.</div><div class="order-number">Order #${order.orderNumber}</div><div class="order-card"><div class="row"><span class="labelx">Name</span><span class="valuex">${esc(order.customer)}</span></div><div class="row"><span class="labelx">Email</span><span class="valuex">${esc(order.email)}</span></div><div class="row"><span class="labelx">Product</span><span class="valuex">${esc(order.product)}</span></div><div class="row"><span class="labelx">Currency</span><span class="valuex">${esc(order.currency)}</span></div><div class="row"><span class="labelx">Payment</span><span class="valuex">${esc(order.paymentMethod||"Demo")}</span></div><div class="order-total"><span>Total</span><span>${money(order.finalPrice,order.currency)}</span></div></div><button class="btn btn-primary" style="width:100%;margin-top:15px" onclick="${p.downloadUrl?`window.open('${esc(p.downloadUrl).replace(/'/g,"\'")}','_blank')`:`toast('Your digital delivery will appear here once a download link is configured.')`}">Access / Download Your Game</button></div>`}
+function confirmationHtml(order,p){
+  const downloadUrl=p?.downloadUrl||"";
+
+  return `<div class="order-success">
+    <div class="demo-note">
+      Your order has been received. We only collected the information needed to process your order.
+    </div>
+    <div class="order-number">
+      Order #${order.orderNumber}
+    </div>
+    <div class="order-card">
+      <div class="row">
+        <span class="labelx">Name</span>
+        <span class="valuex">${esc(order.customer)}</span>
+      </div>
+      <div class="row">
+        <span class="labelx">Email</span>
+        <span class="valuex">${esc(order.email)}</span>
+      </div>
+      <div class="row">
+        <span class="labelx">Product</span>
+        <span class="valuex">${esc(order.product)}</span>
+      </div>
+      <div class="row">
+        <span class="labelx">Currency</span>
+        <span class="valuex">${esc(order.currency)}</span>
+      </div>
+      <div class="row">
+        <span class="labelx">Payment</span>
+        <span class="valuex">${esc(order.paymentMethod||"Demo")}</span>
+      </div>
+      <div class="order-total">
+        <span>Total</span>
+        <span>${money(order.finalPrice,order.currency)}</span>
+      </div>
+    </div>
+    <button
+      class="btn btn-primary"
+      style="width:100%;margin-top:15px"
+      onclick="${downloadUrl
+        ? `window.open('${esc(downloadUrl).replace(/'/g,"\\'")}','_blank')`
+        : `toast('Your digital delivery will appear here once a download link is configured.')`
+      }"
+    >
+      Access / Download Your Game
+    </button>
+  </div>`;
+}
 async function simulatePurchase(){const name=document.getElementById("coName").value.trim(),email=document.getElementById("coEmail").value.trim();if(!name){toast("Please enter your name.",false);return}if(!email){toast("Please enter a valid customer email.",false);return}const p=store.products.find(x=>x.id===checkoutProductId),cur=customerCurrency(),sub=saleInfo(p,cur).price,c=checkoutPromo;let d=c?(c.type==="percentage"?sub*c.discount/100:c.discount):0;if(c?.maxDiscount)d=Math.min(d,c.maxDiscount);d=Math.min(d,sub);const order={clientOrderId:newClientOrderId(),date:new Date().toISOString(),customer:name,email,productId:p.id,product:p.title,originalPrice:saleInfo(p,cur).reg,discount:Number(d.toFixed(2)),promoCode:c?.code||"",finalPrice:Number((sub-d).toFixed(2)),currency:cur,paymentMethod:"Demo",paymentStatus:"Paid (Demo)",downloadStatus:"Demo available"};let cust=store.customers.find(x=>x.email.toLowerCase()===email.toLowerCase());if(!cust){cust={id:uid("cust"),name,email,createdAt:Date.now()};store.customers.push(cust)}else{cust.name=name}if(c){c.uses++}const savedOrder=await persistOrder(order);localStorage.removeItem("novaPendingCheckout");openModal("Order confirmed ✦",confirmationHtml(savedOrder,p))}
 
 function submitCustom(e){e.preventDefault();const r={id:uid("REQ"),name:document.getElementById("reqName").value,email:document.getElementById("reqEmail").value,type:document.getElementById("reqType").value,description:document.getElementById("reqDesc").value,budget:document.getElementById("reqBudget").value,date:document.getElementById("reqDate").value||"",status:"New",createdAt:Date.now()};store.requests.unshift(r);saveStore();e.target.reset();toast("Custom request received");}
